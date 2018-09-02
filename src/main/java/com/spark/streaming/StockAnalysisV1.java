@@ -31,22 +31,22 @@ public class StockAnalysisV1 {
 		
 		JavaDStream<StockDetails> stocks = stocksList.flatMap(f ->  f.stream().collect(Collectors.toList()).iterator());
 		
-		//JavaPairDStream<String, Long> stockClosing = stocks.mapToPair(f -> new Tuple2(f.getSymbol(), f.getPriceData().getClose()));
+		//JavaPairDStream<String, Double> stockClosing = stocks.mapToPair(f -> new Tuple2(f.getSymbol(), f.getPriceData().getClose()));
 		
-		JavaPairDStream<String, Long> stockClosing = stocks.window(Durations.minutes(2), Durations.minutes(1)).mapToPair(f -> new Tuple2(f.getSymbol(), Long.parseLong(f.getPriceData().getClose())));
+		JavaPairDStream<String, Double> stockClosing = stocks.window(Durations.minutes(2), Durations.minutes(1)).mapToPair(f -> new Tuple2(f.getSymbol(), Double.parseDouble(f.getPriceData().getClose())));
 		
-		JavaPairDStream<String, Tuple2<Long, Long>> stockClosingCount = stockClosing.mapValues(f -> new Tuple2<Long, Long>(f, 1L));
+		JavaPairDStream<String, Tuple2<Double, Double>> stockClosingCount = stockClosing.mapValues(f -> new Tuple2<Double, Double>(f, 1.0));
 		
-		JavaPairDStream<String, Tuple2<Long, Long>> stockReduceClosingCount = stockClosingCount.reduceByKey((tuple1,tuple2) -> new Tuple2<Long, Long>(tuple1._1 + tuple2._1 , tuple1._2 + tuple2._2));
+		JavaPairDStream<String, Tuple2<Double, Double>> stockReduceClosingCount = stockClosingCount.reduceByKey((tuple1,tuple2) -> new Tuple2<Double, Double>(tuple1._1 + tuple2._1 , tuple1._2 + tuple2._2));
 		
-		JavaPairDStream<String, Long> averageRDD = stockReduceClosingCount.mapToPair(new PairFunction<Tuple2<String,Tuple2<Long,Long>>, String, Long>() {
+		JavaPairDStream<String, Double> averageRDD = stockReduceClosingCount.mapToPair(new PairFunction<Tuple2<String,Tuple2<Double,Double>>, String, Double>() {
 
 			@Override
-			public Tuple2<String, Long> call(Tuple2<String, Tuple2<Long, Long>> tuple) throws Exception {
-				Tuple2<Long, Long> var = tuple._2;
+			public Tuple2<String, Double> call(Tuple2<String, Tuple2<Double, Double>> tuple) throws Exception {
+				Tuple2<Double, Double> var = tuple._2;
 				
-				long sum = var._1;
-				long count = var._2;
+				Double sum = var._1;
+				Double count = var._2;
 				
 				return new Tuple2<>(tuple._1, sum/count);
 			}
