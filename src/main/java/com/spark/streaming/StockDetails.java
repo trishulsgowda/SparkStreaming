@@ -1,10 +1,15 @@
 package com.spark.streaming;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-public class StockDetails {
+public class StockDetails implements Serializable{
 
+	@Override
+	public String toString() {
+		return "StockDetails [symbol=" + symbol + ", timestamp=" + timestamp + ", priceData=" + priceData + "]";
+	}
 	private String symbol;
 	private String timestamp;
 	private PriceData priceData;
