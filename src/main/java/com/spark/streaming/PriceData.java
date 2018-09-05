@@ -1,6 +1,9 @@
 package com.spark.streaming;
 
-public class PriceData {
+import java.io.Serializable;
+
+public class PriceData implements Serializable {
+	
 
 	private String open;
 	private String high;

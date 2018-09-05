@@ -20,25 +20,25 @@ public class SparkAverageCalculation {
 		
 		JavaSparkContext sc = new JavaSparkContext(conf);
 	    //inputList
-	    List<Tuple2<String,Integer>> inputList = new ArrayList<Tuple2<String,Integer>>();
-	    inputList.add(new Tuple2<String,Integer>("a1", 30));
-	    inputList.add(new Tuple2<String,Integer>("b1", 30));
-	    inputList.add(new Tuple2<String,Integer>("a1", 40));
-	    inputList.add(new Tuple2<String,Integer>("a1", 20));
-	    inputList.add(new Tuple2<String,Integer>("b1", 50));            
+	    List<Tuple2<String,Double>> inputList = new ArrayList<Tuple2<String,Double>>();
+	    inputList.add(new Tuple2<String,Double>("a1",  Double.parseDouble("30.00")));
+	    inputList.add(new Tuple2<String,Double>("b1", Double.parseDouble("30.00")));
+	    inputList.add(new Tuple2<String,Double>("a1", Double.parseDouble("40.00")));
+	    inputList.add(new Tuple2<String,Double>("a1", Double.parseDouble("20.00")));
+	    inputList.add(new Tuple2<String,Double>("b1", Double.parseDouble("50.00")));            
 	    //parallelizePairs    
-	    JavaPairRDD<String, Integer> pairRDD = sc.parallelizePairs(inputList);
+	    JavaPairRDD<String, Double> pairRDD = sc.parallelizePairs(inputList);
 	    
-	    JavaPairRDD<String, Tuple2<Integer, Integer>> valueCount = pairRDD.mapValues(value -> new Tuple2<Integer, Integer>(value,1));
-	    JavaPairRDD<String, Tuple2<Integer, Integer>> reduceCount = valueCount.reduceByKey((x,y) -> new Tuple2<>(x._1 + y._1, x._2 + y._2));
-	    JavaPairRDD<String, Integer> averagePair = reduceCount.mapToPair(new PairFunction<Tuple2<String,Tuple2<Integer,Integer>>, String, Integer>() {
+	    JavaPairRDD<String, Tuple2<Double, Double>> valueCount = pairRDD.mapValues(value -> new Tuple2<Double, Double>(value,1.0));
+	    JavaPairRDD<String, Tuple2<Double, Double>> reduceCount = valueCount.reduceByKey((x,y) -> new Tuple2<>(x._1 + y._1, x._2 + y._2));
+	    JavaPairRDD<String, Double> averagePair = reduceCount.mapToPair(new PairFunction<Tuple2<String,Tuple2<Double,Double>>, String, Double>() {
 
 			@Override
-			public Tuple2<String, Integer> call(Tuple2<String, Tuple2<Integer, Integer>> tuple) throws Exception {
-				Tuple2<Integer, Integer> tup = tuple._2;
-				int total = tup._1;
-				int count = tup._2;
-				return new Tuple2<String, Integer>(tuple._1, total/count);
+			public Tuple2<String, Double> call(Tuple2<String, Tuple2<Double, Double>> tuple) throws Exception {
+				Tuple2<Double, Double> tup = tuple._2;
+				Double total = tup._1;
+				Double count = tup._2;
+				return new Tuple2<String, Double>(tuple._1, total/count);
 			}
 		});
 	    
