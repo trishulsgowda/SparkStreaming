@@ -1,11 +1,14 @@
 package com.spark.streaming;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaDStream;
@@ -63,11 +66,11 @@ public class StockAnalysisV1 {
 		
 		
 		JavaPairDStream<String, Double> stockProfit = stocks.window(Durations.minutes(10), Durations.minutes(5)).mapToPair(f -> new Tuple2(f.getSymbol(), Double.parseDouble(f.getPriceData().getClose()) - Double.parseDouble(f.getPriceData().getOpen())));
-		stockProfit.foreachRDD(rdd -> rdd.saveAsTextFile("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/opt"));
+		//stockProfit.foreachRDD(rdd -> rdd.saveAsTextFile("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/opt"));
 		JavaPairDStream<String, Tuple2<Double, Double>> stockProfitCount = stockProfit.mapValues(f -> new Tuple2<Double, Double>(f, 1.0));
 
 		JavaPairDStream<String, Tuple2<Double, Double>> stockReduceProfitCount = stockProfitCount.reduceByKey((tuple1,tuple2) -> new Tuple2<Double, Double>(tuple1._1 + tuple2._1 , tuple1._2 + tuple2._2));
-		stockReduceProfitCount.foreachRDD(rdd -> rdd.saveAsTextFile("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/opt2"));
+		//stockReduceProfitCount.foreachRDD(rdd -> rdd.saveAsTextFile("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/opt2"));
 		JavaPairDStream<String, Double> averageProfitRDD = stockReduceProfitCount.mapToPair(new PairFunction<Tuple2<String,Tuple2<Double,Double>>, String, Double>() {
 
 			@Override
@@ -85,10 +88,13 @@ public class StockAnalysisV1 {
 		
 		profitRDD.print();
 		
-		//profitRDD.foreachRDD(foreachFunc);
+		JavaDStream<Tuple2<Double,String>> maxProfitRDD = profitRDD.reduce((t1,t2) -> {
+			if(t1._1 > t2._1) return t1; 
+			else return t2;
+		});
 		
-		//stockClosing.print();
-		//stockClosing.print();
+		maxProfitRDD.print();
+		
 		jssc.start();
 		jssc.awaitTermination();
 		jssc.close();
