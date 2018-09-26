@@ -9,6 +9,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
@@ -29,10 +30,10 @@ public class StockAnalysisV1 {
 		Logger.getRootLogger().setLevel(Level.ERROR);
 		JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(15));
 		jssc.checkpoint("checkpoint_dir");
-		JavaDStream<String> stream = jssc.textFileStream("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/freshData").cache();
+		//JavaDStream<String> stream = jssc.textFileStream("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/freshData").cache();
 		
-		//stream.print();
-
+		JavaDStream<String> stream = jssc.textFileStream(args[0]).cache();
+		
 		JavaDStream<List<StockDetails>> stocksList = stream.map(f -> { return new ObjectMapper().readValue(f, new TypeReference<List<StockDetails>>() {});});
 
 		JavaDStream<StockDetails> stocks = stocksList.flatMap(new FlatMapFunction<List<StockDetails>, StockDetails>() {
@@ -44,18 +45,17 @@ public class StockAnalysisV1 {
 		});
 
 
-		//JavaPairDStream<String, Double> stockClosing = stocks.window(Durations.minutes(10), Durations.minutes(5)).mapToPair(f -> new Tuple2(f.getSymbol(), Double.parseDouble(f.getPriceData().getClose())));
+		JavaPairDStream<String, Double> stockClosing = stocks.window(Durations.minutes(10), Durations.minutes(5)).mapToPair(f -> new Tuple2(f.getSymbol(), Double.parseDouble(f.getPriceData().getClose())));
 
 		/*
 		 * Moving average Solution
 		 */
-		/*JavaPairDStream<String, Tuple2<Double, Double>> stockClosingCount = stockClosing.mapValues(f -> new Tuple2<Double, Double>(f, 1.0));
+		JavaPairDStream<String, Tuple2<Double, Double>> stockClosingCount = stockClosing.mapValues(f -> new Tuple2<Double, Double>(f, 1.0));
 
 		JavaPairDStream<String, Tuple2<Double, Double>> stockReduceClosingCount = stockClosingCount.reduceByKey((tuple1,tuple2) -> new Tuple2<Double, Double>(tuple1._1 + tuple2._1 , tuple1._2 + tuple2._2));
 
 		JavaPairDStream<String, Double> averageRDD = stockReduceClosingCount.mapToPair(new PairFunction<Tuple2<String,Tuple2<Double,Double>>, String, Double>() {
 
-			@Override
 			public Tuple2<String, Double> call(Tuple2<String, Tuple2<Double, Double>> tuple) throws Exception {
 				Tuple2<Double, Double> var = tuple._2;
 
@@ -65,7 +65,10 @@ public class StockAnalysisV1 {
 				return new Tuple2<>(tuple._1, sum/count);
 			}
 		});
-		averageRDD.print();*/
+		averageRDD.foreachRDD(f -> {
+			String messageId = String.valueOf(System.currentTimeMillis());
+			f.coalesce(1).saveAsTextFile(args[1]+messageId);
+		});
 		
 		
 		/*
@@ -101,9 +104,9 @@ public class StockAnalysisV1 {
 		
 		maxProfitRDD.print();*/
 		
-		DecimalFormat numberFormat = new DecimalFormat("#.0000");
-		JavaPairDStream<String, Double> stockProfitRDD = stocks.window(Durations.seconds(30), Durations.seconds(15)).mapToPair(f -> new Tuple2(f.getSymbol(), numberFormat.format(Double.parseDouble(f.getPriceData().getClose()) - Double.parseDouble(f.getPriceData().getOpen()))));
-		//JavaPairDStream<String, Double> stockLosesRDD = stockProfitRDD.mapToPair(f -> new Tuple2(f._1, f._2));
+		//DecimalFormat numberFormat = new DecimalFormat("#.0000");
+		//JavaPairDStream<String, Double> stockProfitRDD = stocks.window(Durations.seconds(30), Durations.seconds(15)).mapToPair(f -> new Tuple2(f.getSymbol(), numberFormat.format(Double.parseDouble(f.getPriceData().getClose()) - Double.parseDouble(f.getPriceData().getOpen()))));
+		////JavaPairDStream<String, Double> stockLosesRDD = stockProfitRDD.mapToPair(f -> new Tuple2(f._1, f._2));
 		
 		/*stockProfitRDD.reduceByKey(new Function2<Double, Double, Double>() {
 
@@ -119,14 +122,14 @@ public class StockAnalysisV1 {
 		//stockProfitRDD.foreachRDD(rdd -> rdd.saveAsTextFile("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/opt"));
 		//stockLosesRDD.foreachRDD(rdd -> rdd.saveAsTextFile("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/opt1"));
 		
-		JavaPairDStream<String, Double> gains = stockProfitRDD.filter(f -> f._2 > 0).reduceByKey((x,y)-> x + y);
+		//JavaPairDStream<String, Double> gains = stockProfitRDD.filter(f -> f._2 > 0).reduceByKey((x,y)-> x + y);
 		
-		JavaPairDStream<String, Double> loses = stockProfitRDD.filter(f -> f._2 < 0).reduceByKey((x,y)-> Math.abs(x) + Math.abs(y));
+		//JavaPairDStream<String, Double> loses = stockProfitRDD.filter(f -> f._2 < 0).reduceByKey((x,y)-> Math.abs(x) + Math.abs(y));
 		
 		//gains.foreachRDD(rdd -> rdd.saveAsTextFile("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/opt2"));
 		//loses.foreachRDD(rdd -> rdd.saveAsTextFile("D:/BITS_Pilani_Upgrad_Big_Data/Course_4/Spark_Streaming/Project/opt3"));
 		
-		JavaPairDStream<String, Tuple2<Double, Double>> avgProfitAndLoses =  gains.join(loses); 
+		/*JavaPairDStream<String, Tuple2<Double, Double>> avgProfitAndLoses =  gains.join(loses); 
 		
 		JavaPairDStream<String, Double> rsi = avgProfitAndLoses.mapValues(new Function<Tuple2<Double,Double>, Double>() {
 
@@ -146,7 +149,7 @@ public class StockAnalysisV1 {
 			}
 		});
 		
-		rsi.print();
+		rsi.print();*/
 		
 		jssc.start();
 		jssc.awaitTermination();
