@@ -67,7 +67,7 @@ public class StockAnalysisV1 {
 		});
 		averageRDD.foreachRDD(f -> {
 			String messageId = String.valueOf(System.currentTimeMillis());
-			f.coalesce(1).saveAsTextFile(args[1]+messageId);
+			f.coalesce(1).saveAsTextFile(args[1]+"_MovingAverage_" + messageId);
 		});
 		
 		
